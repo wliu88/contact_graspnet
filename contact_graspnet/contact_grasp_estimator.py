@@ -121,6 +121,8 @@ class GraspEstimator:
             try:
                 dists = contact_pts[:,:3].reshape(-1,1,3) - segment_pc.reshape(1,-1,3)           
                 min_dists = np.min(np.linalg.norm(dists,axis=2),axis=1)
+                # print("filter segment, check min_dists")
+                # print(min_dists)
                 filtered_grasp_idcs = np.where(min_dists<thres)
             except:
                 pass
@@ -156,6 +158,8 @@ class GraspEstimator:
                 size = np.minimum(np.maximum(np.max(obj_extent)*2, min_size), max_size)
                 print('Extracted Region Cube Size: ', size)
                 partial_pc = full_pc[np.all(full_pc > (obj_center - size/2), axis=1) & np.all(full_pc < (obj_center + size/2),axis=1)]
+                print("partial pc shape")
+                print(partial_pc.shape)
                 if np.any(partial_pc):
                     partial_pc = regularize_pc_point_count(partial_pc, self._contact_grasp_cfg['DATA']['raw_num_points'], use_farthest_point=self._contact_grasp_cfg['DATA']['use_farthest_point'])
                     pc_regions[i] = partial_pc
@@ -206,7 +210,10 @@ class GraspEstimator:
         gripper_openings = np.minimum(offset_pred + self._contact_grasp_cfg['TEST']['extra_opening'], self._contact_grasp_cfg['DATA']['gripper_width'])
 
         with_replacement = self._contact_grasp_cfg['TEST']['with_replacement'] if 'with_replacement' in self._contact_grasp_cfg['TEST'] else False
-        
+
+        print("prediction scores")
+        print(pred_scores)
+
         selection_idcs = self.select_grasps(pred_points[:,:3], pred_scores, 
                                             self._contact_grasp_cfg['TEST']['max_farthest_points'], 
                                             self._contact_grasp_cfg['TEST']['num_samples'], 
@@ -251,6 +258,7 @@ class GraspEstimator:
         if local_regions:
             pc_regions, _ = self.extract_3d_cam_boxes(pc_full, pc_segments)
             for k, pc_region in pc_regions.items():
+                print("predict grasps for region", k)
                 pred_grasps_cam[k], scores[k], contact_pts[k], gripper_openings[k] = self.predict_grasps(sess, pc_region, convert_cam_coords=True, forward_passes=forward_passes)
         else:
             pc_full = regularize_pc_point_count(pc_full, self._contact_grasp_cfg['DATA']['raw_num_points'])
