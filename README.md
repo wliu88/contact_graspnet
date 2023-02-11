@@ -10,6 +10,27 @@ ICRA 2021
   <img src="examples/2.gif" width="640" title="UOIS + Contact-GraspNet"/>
 </p>
 
+## New installation
+
+The orginal conda env setup is outdated and does not work for newer GPUs, use the new instruction below.
+
+```
+conda create --name contact_graspnet python=3.8
+conda activate contact_graspnet
+conda install -c conda-forge cudatoolkit=11.2(or 11.3)
+conda install -c conda-forge cudnn=8.2
+pip install tensorflow==2.5 tensorflow-gpu=2.5
+pip install opencv-python-headless
+pip install pyyaml
+pip install pyrender
+pip install tqdm
+pip install mayavi
+# install the specific versions below to resolve conflicts
+pip install pyyaml==5.3.1
+pip install pyglet==1.5.9
+sh compile_pointnet_tfops.sh
+```
+
 ## Installation
 
 This code has been tested with python 3.7, tensorflow 2.2, CUDA 11.1
