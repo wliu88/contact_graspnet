@@ -87,22 +87,23 @@ def inference(global_config, checkpoint_dir, input_paths, K=None, local_regions=
             pc_full, pc_segments, pc_colors = grasp_estimator.extract_point_clouds(depth, cam_K, segmap=segmap, rgb=rgb,
                                                                                     skip_border_objects=skip_border_objects, z_range=z_range)
 
-        print("pc_full", pc_full.shape)
-        print("pc_colors", pc_colors.shape)
-        print("pc_segments", len(pc_segments))
-        trimesh.PointCloud(pc_full, colors=pc_colors).show()
-        pcs_vis = []
-        rgb_colors = get_rgb_colors()
-        print(len(rgb_colors))
-        print(np.array(list(rgb_colors[0][1]) + [1], dtype=np.float))
-        for seg_id in pc_segments:
-            pcs_vis.append(trimesh.PointCloud(pc_segments[seg_id], colors=list(rgb_colors[int(seg_id)][1]) + [1]))
-        trimesh.Scene(pcs_vis).show()
+        # print("pc_full", pc_full.shape)
+        # print("pc_colors", pc_colors.shape)
+        # print("pc_segments", len(pc_segments))
+        # trimesh.PointCloud(pc_full, colors=pc_colors).show()
+        # pcs_vis = []
+        # rgb_colors = get_rgb_colors()
+        # print(len(rgb_colors))
+        # print(np.array(list(rgb_colors[0][1]) + [1], dtype=np.float))
+        # for seg_id in pc_segments:
+        #     pcs_vis.append(trimesh.PointCloud(pc_segments[seg_id], colors=list(rgb_colors[int(seg_id)][1]) + [1]))
+        # trimesh.Scene(pcs_vis).show()
 
         print('Generating Grasps...')
         pred_grasps_cam, scores, contact_pts, _ = grasp_estimator.predict_scene_grasps(sess, pc_full, pc_segments=pc_segments, 
                                                                                           local_regions=local_regions, filter_grasps=filter_grasps, forward_passes=forward_passes)  
 
+        print("Saving grasp prediction to pkl")
         # Save results
         np.savez('results/predictions_{}'.format(os.path.basename(p.replace('png','npz').replace('npy','npz'))), 
                   pred_grasps_cam=pred_grasps_cam, scores=scores, contact_pts=contact_pts)
@@ -111,24 +112,26 @@ def inference(global_config, checkpoint_dir, input_paths, K=None, local_regions=
         # show_image(rgb, segmap)
         # visualize_grasps(pc_full, pred_grasps_cam, scores, plot_opencv_cam=True, pc_colors=pc_colors)
 
-        gripper = mesh_utils.create_gripper('panda')
-        gripper_mesh = gripper.hand
-        for i, k in enumerate(pred_grasps_cam):
-            for j in range(min(len(pred_grasps_cam[k]), 10)):
-                tfm = pred_grasps_cam[k][j]
-                print(pred_grasps_cam[k][j])
-                gm = copy.deepcopy(gripper_mesh)
-                gm.apply_transform(tfm)
-                trimesh.Scene(pcs_vis + [gm]).show()
-
-        input("next scene?")
+        # print("here")
+        # gripper = mesh_utils.create_gripper('panda')
+        # gripper_mesh = gripper.hand
+        # for i, k in enumerate(pred_grasps_cam):
+        #     for j in range(min(len(pred_grasps_cam[k]), 10)):
+        #         tfm = pred_grasps_cam[k][j]
+        #         print(pred_grasps_cam[k][j])
+        #         gm = copy.deepcopy(gripper_mesh)
+        #         gm.apply_transform(tfm)
+        #         trimesh.Scene(pcs_vis + [gm]).show()
+        #         print("here")
+        #
+        # input("next scene?")
         
     if not glob.glob(input_paths):
         print('No files found: ', input_paths)
 
 
 def inference_on_pc(global_config, checkpoint_dir, input_filename, output_filename, K=None, local_regions=True, skip_border_objects=False,
-              filter_grasps=True, segmap_id=None, z_range=[0.2, 1.8], forward_passes=1):
+              filter_grasps=True, segmap_id=None, z_range=[0.2, 1.8], forward_passes=1, visualize=False):
     """
     Predict 6-DoF grasp distribution for given model and input data
 
@@ -163,25 +166,33 @@ def inference_on_pc(global_config, checkpoint_dir, input_filename, output_filena
     os.makedirs('results', exist_ok=True)
 
     # Process example test scenes
+    # with open(input_filename, "rb") as fh:
+    #     data_dict = pickle.load(fh, encoding="bytes")
+    # # data_dict = np.load(input_paths, allow_pickle=True, encoding="bytes")
+    # print(data_dict.keys())
+    # pc_full = data_dict[bytes("pc_full", 'utf-8')]
+    # pc_colors = data_dict[bytes("pc_colors", 'utf-8')]
+    # pc_segments = data_dict[bytes("pc_segments", 'utf-8')]
     with open(input_filename, "rb") as fh:
-        data_dict = pickle.load(fh, encoding="bytes")
+        data_dict = pickle.load(fh)
     # data_dict = np.load(input_paths, allow_pickle=True, encoding="bytes")
     print(data_dict.keys())
-    pc_full = data_dict[bytes("pc_full", 'utf-8')]
-    pc_colors = data_dict[bytes("pc_colors", 'utf-8')]
-    pc_segments = data_dict[bytes("pc_segments", 'utf-8')]
+    pc_full = data_dict["pc_full"]
+    pc_colors = data_dict["pc_colors"]
+    pc_segments = data_dict["pc_segments"]
 
-    print("pc_full", pc_full.shape)
-    print("pc_colors", pc_colors.shape)
-    print("pc_segments", len(pc_segments))
-    trimesh.PointCloud(pc_full, colors=pc_colors).show()
-    pcs_vis = []
-    rgb_colors = get_rgb_colors()
-    print(len(rgb_colors))
-    print(np.array(list(rgb_colors[0][1]) + [1], dtype=np.float))
-    for seg_id in pc_segments:
-        pcs_vis.append(trimesh.PointCloud(pc_segments[seg_id], colors=list(rgb_colors[int(seg_id)][1]) + [1]))
-    trimesh.Scene(pcs_vis).show()
+    if visualize:
+        print("pc_full", pc_full.shape)
+        print("pc_colors", pc_colors.shape)
+        print("pc_segments", len(pc_segments))
+        trimesh.PointCloud(pc_full, colors=pc_colors).show()
+        pcs_vis = []
+        rgb_colors = get_rgb_colors()
+        print(len(rgb_colors))
+        print(np.array(list(rgb_colors[0][1]) + [1], dtype=np.float))
+        for seg_id in pc_segments:
+            pcs_vis.append(trimesh.PointCloud(pc_segments[seg_id], colors=list(rgb_colors[int(seg_id)][1]) + [1]))
+        trimesh.Scene(pcs_vis).show()
 
     print('Generating Grasps...')
     pred_grasps_cam, scores, contact_pts, _ = grasp_estimator.predict_scene_grasps(sess, pc_full,
@@ -192,7 +203,7 @@ def inference_on_pc(global_config, checkpoint_dir, input_filename, output_filena
 
     # Save results
     with open(output_filename, "wb") as fh:
-        pickle.dump({"pred_grasps_cam": pred_grasps_cam, "scores": scores, "contact_pts": contact_pts}, fh, protocol=2)
+        pickle.dump({"pred_grasps_cam": pred_grasps_cam, "scores": scores, "contact_pts": contact_pts}, fh)
     # np.savez('results/predictions_{}'.format(os.path.basename(p.replace('png', 'npz').replace('npy', 'npz'))),
     #          pred_grasps_cam=pred_grasps_cam, scores=scores, contact_pts=contact_pts)
 
@@ -200,21 +211,22 @@ def inference_on_pc(global_config, checkpoint_dir, input_filename, output_filena
     # show_image(rgb, segmap)
     # visualize_grasps(pc_full, pred_grasps_cam, scores, plot_opencv_cam=True, pc_colors=pc_colors)
 
-    # gripper = mesh_utils.create_gripper('panda')
-    # gripper_mesh = gripper.hand
-    # gms = []
-    # grasps_vis = []
-    # for i, k in enumerate(pred_grasps_cam):
-    #     for j in range(min(len(pred_grasps_cam[k]), 10)):
-    #         tfm = pred_grasps_cam[k][j]
-    #         print(pred_grasps_cam[k][j])
-    #         gm = copy.deepcopy(gripper_mesh)
-    #         gm.apply_transform(tfm)
-    #         gms.append(gm)
-    #         grasp_vis = trimesh.creation.axis(transform=tfm, origin_size=0.001, axis_radius=0.001, axis_length=0.05)
-    #         grasps_vis.append(grasp_vis)
-    # trimesh.Scene(pcs_vis + gms + grasps_vis).show()
-    # trimesh.Scene(pcs_vis + grasps_vis).show()
+    if visualize:
+        gripper = mesh_utils.create_gripper('panda')
+        gripper_mesh = gripper.hand
+        gms = []
+        grasps_vis = []
+        for i, k in enumerate(pred_grasps_cam):
+            for j in range(min(len(pred_grasps_cam[k]), 10)):
+                tfm = pred_grasps_cam[k][j]
+                print(pred_grasps_cam[k][j])
+                gm = copy.deepcopy(gripper_mesh)
+                gm.apply_transform(tfm)
+                gms.append(gm)
+                grasp_vis = trimesh.creation.axis(transform=tfm, origin_size=0.001, axis_radius=0.001, axis_length=0.05)
+                grasps_vis.append(grasp_vis)
+        trimesh.Scene(pcs_vis + gms + grasps_vis).show()
+        trimesh.Scene(pcs_vis + grasps_vis).show()
 
         
 if __name__ == "__main__":
